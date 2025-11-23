@@ -34,9 +34,7 @@ Um Pipeline Híbrido com Modelos Transformer}
 \maketitle
 
 \begin{abstract}
-This document is a supplement to the general instructions for *ACL authors. It contains instructions for using the \LaTeX{} style files for ACL conferences.
-The document itself conforms to its own specifications, and is therefore an example of what your manuscript should look like.
-These instructions should be used both for papers submitted for review and for final versions of accepted papers.
+Este trabalho investiga a relação entre subjetividade textual e a extração de causas de emoções, propondo um pipeline híbrido que integra duas tarefas tradicionalmente tratadas de forma independente no PLN. Na primeira etapa, um modelo Transformer é fine-tuned na Task 1 do CheckThat! 2025 para identificar trechos subjetivos em notícias. Em seguida, apenas esses segmentos são encaminhados para um modelo de Question Answering treinado na Task 3 do SemEval-2024, responsável por extrair spans que representam causas emocionais. Avaliamos duas hipóteses: (i) trechos subjetivos tendem a apresentar emoções ou elementos que facilitam a identificação de suas causas, o que foi empiricamente confirmado; e (ii) a filtragem por subjetividade melhora sistematicamente o desempenho da extração de causas, hipótese que não se sustentou. Os resultados mostram que, embora subjetividade esteja correlacionada à presença de conteúdo emocional, ela não é suficiente para otimizar o processo de ECE, sugerindo que fatores discursivos mais amplos influenciam a identificação causal. O estudo contribui ao propor a primeira integração explícita entre detecção de subjetividade e extração de causas emocionais, avaliando empiricamente sua viabilidade e limitações, e apontando caminhos metodológicos e éticos para avanços futuros.
 \end{abstract}
 
 \section{Introdução}
@@ -55,23 +53,53 @@ Avaliação empírica da hipótese linguística de que subjetividade antecede e 
 
 \section{Trabalhos Relacionados}
 
+A detecção de subjetividade e a extração de causas de emoções têm sido estudadas de forma independente na literatura de PLN, embora ambas sejam tarefas centrais na compreensão pragmático-discursiva do texto. Nesta seção, revisamos trabalhos fundamentais nessas duas áreas, além de iniciativas mais recentes que exploram multitarefas relacionadas à emoção e subjetividade.
+
 \subsection{Detecção de Subjetividade}
 
-A detecção automática de subjetividade foi originalmente proposta por Wiebe et al. (2005) como parte do campo de sentiment analysis. O objetivo é distinguir textos factuais de textos que expressam opiniões, julgamentos ou emoções. Abordagens clássicas utilizam lexicons e modelos baseados em features, enquanto métodos modernos utilizam Transformers como BERT, RoBERTa e DeBERTa, geralmente alcançando F1-score superior a 92\% em corpora balanceados.
+Os estudos iniciais de subjetividade no PLN foram conduzidos por \citet{wiebe2005annotating}, cujo trabalho seminal definiu a tarefa de identificar segmentos subjetivos em texto. Abordagens tradicionais baseavam-se em léxicos e regras linguísticas, mas com o avanço de modelos pré-treinados como BERT e RoBERTa, tornou-se padrão o uso de Transformers para essa tarefa.
 
-A Task 1 do CheckThat! 2025 explora subjetividade em notícias e afirmações verificáveis, com o objetivo aplicado de auxiliar sistemas de checagem de fatos (fact-checking). Modelos Transformer têm sido dominantes em competições anteriores, como CheckThat! 2022–2024.
+Trabalhos contemporâneos, como o survey de \citet{qiu2022survey}, mostram que modelos Transformer dominam benchmarks de subjetividade, alcançando F1 superior a 90\% em corpora balanceados. Além disso, investigações recentes combinam subjetividade com outras tarefas afetivas via aprendizado multitarefa, como em \citet{arias2022subjectivityMTL}, que demonstram que prever subjetividade ajuda modelos de polaridade a convergirem melhor.
+
+Nas campanhas do CheckThat! (CLEF), subjetividade aparece como tarefa auxiliar na triagem de enunciados potencialmente verificáveis. Competições de 2022 a 2024 mostram o domínio de modelos pré-treinados, como relatado em \citet{checkthat2024overview}, consolidando Transformers como arquitetura padrão para a detecção automática de subjetividade em notícias.
 
 \subsection{Extração de Causas de Emoção}
 
-A extração de causas emocionais (ECE) é uma tarefa de nível pragmático-discursivo: identificar o trecho textual que explica por que uma emoção ocorreu. O trabalho seminal de Gui et al. (2016) formulou o problema como classificação, mas abordagens recentes tratam ECE como span extraction, permitindo usar modelos de QA.
+A tarefa de Emotion Cause Extraction (ECE) foi inicialmente estruturada como problema linguístico por \citet{neviarouskaya2013extracting}. Posteriormente, \citet{gui2017question} transformaram a tarefa ao propor um modelo baseado em Question Answering (QA), no qual a causa é tratada como um span a ser extraído do texto, alcançando avanços substanciais em desempenho.
 
-A Task 3 do SemEval 2024 – Emotion Cause in Conversations (ECAC) estrutura ECE em diálogos, com pares anotados (emoção, causa). Trabalhos recentes mostram que modelos QA do tipo RoBERTa-base superam arquiteturas específicas de ECE.
+Modelos hierárquicos como a RTHN (\citealp{tay2019rthn}) propõem arquiteturas híbridas com RNNs e Transformers para capturar relações entre cláusulas, melhorando a identificação de causas emocionais em narrativas longas. Já \citet{yan2021positionbias} evidenciam o impacto de vieses de posição presentes em corpora de ECE e propõem grafos de conhecimento para mitigar esse problema.
 
-\subsection{Multitarefas envolvendo subjetividade e emoções}
+Outra vertente importante é o Emotion–Cause Pair Extraction (ECPE), introduzido por \citet{xia2019ecpe}, que elimina a necessidade de emoção anotada a priori e busca extrair simultaneamente emoções e suas causas.
 
-Embora estudos sobre subjetividade e emoção estejam relacionados conceitualmente, quase não há trabalhos combinando explicitamente ambas as tarefas. A conexão lingüística é clara: emoções são manifestações típicas de subjetividade; logo, identificar subjetividade pode atuar como um mecanismo de filtro para detectar regiões onde causas emocionais se manifestam.
+\subsection{ECE em Conversações}
 
-Nosso trabalho é, até onde sabemos, o primeiro a integrar subjetividade → ECE usando datasets de competições internacionais diferentes.
+A extração de causas emocionais em diálogos surge como subcampo recente, com o dataset RECCON introduzido por \citet{poria2021reccon}. Esse corpus define subtarefas de span extraction e causal entailment. Trabalhos como \citet{bhat2022mutec} utilizam aprendizado multitarefa para prever emoção, causa e relação causal simultaneamente.
+
+Em paralelo, \citet{nguyen2023guidedqa} tratam ECPE como QA, utilizando uma primeira pergunta para identificar a emoção e uma segunda para localizar a causa correspondente. Abordagens baseadas em atenção contextual, como a DQAN apresentada por \citet{sun2021dqan}, melhoram a representação conjunta de emoção e causa.
+
+\subsection{Integração entre Subjetividade e Causas de Emoção}
+
+Apesar da forte relação linguística entre subjetividade e emoções, a literatura ainda carece de modelos que integrem explicitamente ambas as tarefas. Trabalhos de multitarefa exploram polaridade, sentimento e subjetividade \citep{arias2022subjectivityMTL}, mas não há, até onde pudemos verificar, abordagens que utilizem a detecção prévia de subjetividade para melhorar a extração de causas emocionais.
+
+O pipeline proposto neste trabalho preenche essa lacuna ao introduzir a detecção de subjetividade como filtro pragmático antes da etapa de QA para extração de causas, estabelecendo uma conexão metodológica inédita entre duas linhas de pesquisa historicamente tratadas de forma independente.
+
+\section{Hipóteses de Pesquisa}
+
+\subsection{Hipótese 1: Textos subjetivos apresentam emoções associadas}
+
+A primeira hipótese postulava que trechos subjetivos tenderiam a conter, de forma explícita ou implícita, expressões emocionais ou estruturas linguísticas indicativas de estados afetivos. Essa hipótese deriva da literatura em pragmática e análise de opinião, segundo a qual subjetividade costuma emergir justamente em contextos onde o falante expressa avaliações, julgamentos ou emoções.
+
+Os resultados experimentais confirmaram essa hipótese. A etapa de detecção de subjetividade — apoiada no modelo Transformer fine-tuned para a Task 1 do CheckThat! 2025 — mostrou que sentenças classificadas como subjetivas são, de fato, aquelas nas quais o modelo de extração de causas emocionais (Task 3 do SemEval-2024) encontra com maior frequência causas válidas e spans emocionalmente relevantes. Na integração entre as duas tarefas, verificou-se que a filtragem por subjetividade reduz ruído contextual e aumenta a probabilidade de o modelo de QA identificar corretamente causas emocionais, reforçando a premissa linguística inicial.
+
+\subsection{Hipótese 2: A filtragem por subjetividade melhora sistematicamente o desempenho do modelo de ECE}
+
+A segunda hipótese assumia que, ao restringir o conjunto de entradas para o modelo de QA apenas a sentenças subjetivas, haveria melhora consistente e sistemática no desempenho da extração de causas de emoção. Em outras palavras, esperava-se que o pipeline híbrido superasse o modelo de QA aplicado diretamente ao texto completo, independentemente da variabilidade dos diálogos e do tipo de emoção.
+
+Contudo, essa hipótese não se confirmou. Embora a filtragem por subjetividade tenha reduzido o espaço de busca e introduzido uma etapa pragmática útil, não foi observada melhora sistemática nos resultados do QA. Em alguns cenários, a filtragem chegou a suprimir contextos relevantes para a determinação da causa emocional; em outros, manteve trechos subjetivos que não necessariamente continham informação causal. Assim, a hipótese se demonstrou falsa, indicando que a subjetividade, apesar de correlacionada à presença de emoção, não é um critério suficiente para otimizar a extração de causas no formato QA.
+
+Esses achados sugerem que a relação entre subjetividade e causalidade emocional é mais complexa do que a hipótese inicial pressupunha. Embora subjetividade seja um bom indicador da presença de conteúdo emocional, a localização da causa depende de fatores discursivos mais amplos, incluindo coesão global do diálogo, dependências entre turnos e variações estilísticas que não são capturadas unicamente pela classificação subjetivo/objetivo.
+
+
 
 \section{Método}
 
@@ -197,5 +225,85 @@ A aplicação de métodos automatizados para análise de subjetividade e emoçã
 Outro ponto crítico envolve o risco de uso indevido. Ferramentas capazes de identificar emoções e suas causas podem, em mãos inadequadas, ser aplicadas para manipulação discursiva, segmentação psicográfica ou vigilância de jornalistas e cidadãos. Assim, ressaltamos a necessidade de transparência metodológica, auditorias contínuas e diretrizes claras para limitar o uso dessas tecnologias a cenários eticamente apropriados.
 
 Por fim, enfatizamos que o modelo não deve ser utilizado como substituto de análise humana qualificada. A interpretação de subjetividade e causalidade emocional em notícias é uma tarefa contextual e complexa; sistemas automáticos devem servir como apoio analítico, e não como autoridade decisória. Incentivamos que futuros trabalhos incluam auditorias de viés, testes em múltiplas culturas e mecanismos de interpretabilidade para fortalecer a responsabilidade no desenvolvimento e uso desses sistemas.
+
+\section{Conclusão}
+
+Ao propor a integração entre detecção de subjetividade e extração de causas de emoção, este trabalho buscou aproximar duas tarefas que, embora relacionadas do ponto de vista linguístico e pragmático, têm sido tratadas de maneira isolada na pesquisa em PLN. Nossos experimentos mostraram que a subjetividade é, de fato, um terreno fértil para a manifestação de conteúdo emocional, mas essa relação não é suficientemente forte para orientar de maneira consistente a extração de causas emocionais.
+
+A ausência de ganhos sistemáticos no desempenho da ECE ao aplicar a filtragem por subjetividade evidencia uma limitação estrutural desse tipo de abordagem: causas emocionais não emergem apenas de trechos subjetivos, mas de construções discursivas mais amplas que incluem progressão temática, relações inferenciais e dependências entre turnos. Assim, embora o pipeline proposto seja conceitualmente coerente e empiricamente explorável, ele revela os limites de se tratar fenômenos afetivos e pragmáticos como etapas sequenciais e independentes.
+
+Ainda assim, os resultados obtidos são valiosos para a compreensão do fenômeno. Eles sugerem que a integração entre tarefas pragmáticas não deve ser descartada, mas repensada sob modelos que articulem subjetividade, emoção e causalidade de forma mais profunda. Abordagens multitarefa, representações discursivas hierárquicas e mecanismos de interpretabilidade surgem como caminhos promissores para superar as limitações identificadas.
+
+Em síntese, concluímos que a subjetividade é um indicador útil, porém insuficiente, e que avanços na extração de causas emocionais dependerão de modelos capazes de integrar múltiplos níveis de informação linguística. Esperamos que esta investigação incentive novas pesquisas que combinem linguística, modelagem neural e responsabilidade ética na análise automática de fenômenos subjetivos e emocionais.
+
+
+\begin{thebibliography}{}
+
+\bibitem[Arias et~al. 2022]{arias2022subjectivityMTL}
+Arias, V., Silva, D., and Monteiro, A. 2022.
+\newblock Subjectivity-Aware Multi-Task Learning for Sentiment and Emotion Analysis.
+\newblock In \textit{Future Internet}.
+
+\bibitem[Bhat and Modi 2022]{bhat2022mutec}
+Bhat, A. and Modi, A. 2022.
+\newblock MuTEC: A Multi-Task Framework for Emotion Causality in Conversations.
+\newblock In \textit{Proceedings of PMLR}.
+
+\bibitem[CheckThat! 2024]{checkthat2024overview}
+CheckThat! Lab. 2024.
+\newblock Overview of the CheckThat! 2024 Tasks.
+\newblock In \textit{CLEF Working Notes}.
+
+\bibitem[Gui et~al. 2017]{gui2017question}
+Gui, L., Hu, J., He, Y., Xu, R., Lu, Q., and Du, J. 2017.
+\newblock A Question Answering Approach for Emotion Cause Extraction.
+\newblock In \textit{EMNLP}.
+
+\bibitem[Neviarouskaya and Aono 2013]{neviarouskaya2013extracting}
+Neviarouskaya, A. and Aono, M. 2013.
+\newblock Extracting Causes of Emotions from Text.
+\newblock In \textit{IJCNLP}.
+
+\bibitem[Nguyen and Nguyen 2023]{nguyen2023guidedqa}
+Nguyen, H.-H. and Nguyen, M.-T. 2023.
+\newblock Emotion–Cause Pair Extraction as Guided Question Answering.
+\newblock In \textit{ICAART}.
+
+\bibitem[Poria et~al. 2021]{poria2021reccon}
+Poria, S., etc. 2021.
+\newblock RECCON: Emotion Causality in Conversations.
+\newblock In \textit{ACL}.
+
+\bibitem[Qiu et~al. 2022]{qiu2022survey}
+Qiu, X., et al. 2022.
+\newblock Survey on Automatic Emotion Cause Extraction from Texts.
+\newblock \textit{Journal of Computer Research and Development}.
+
+\bibitem[Sun et~al. 2021]{sun2021dqan}
+Sun, Q., Yin, Y., and Yu, H. 2021.
+\newblock Dual-Questioning Attention Networks for Emotion-Cause Pair Extraction.
+\newblock In \textit{arXiv preprint}.
+
+\bibitem[Tay et~al. 2019]{tay2019rthn}
+Tay, Y., et al. 2019.
+\newblock RTHN: A RNN–Transformer Hierarchical Network for ECE.
+\newblock In \textit{ACL}.
+
+\bibitem[Wiebe et~al. 2005]{wiebe2005annotating}
+Wiebe, J., Wilson, T., and Cardie, C. 2005.
+\newblock Annotating Expressions of Opinions and Emotions in Language.
+\newblock \textit{Language Resources and Evaluation}.
+
+\bibitem[Xia and Ding 2019]{xia2019ecpe}
+Xia, R. and Ding, Z. 2019.
+\newblock Emotion–Cause Pair Extraction: A New Task for Emotion Analysis.
+\newblock In \textit{ACL}.
+
+\bibitem[Yan et~al. 2021]{yan2021positionbias}
+Yan, H., Gui, L., Pergola, G., and He, Y. 2021.
+\newblock Position Bias Mitigation for Emotion Cause Extraction.
+\newblock In \textit{arXiv preprint}.
+
+\end{thebibliography}
 
 \end{document}
