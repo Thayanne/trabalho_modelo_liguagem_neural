@@ -57,7 +57,7 @@ Avaliação empírica da hipótese linguística de que subjetividade antecede e 
 
 \subsection{Detecção de Subjetividade}
 
-A detecção automática de subjetividade foi originalmente proposta por Wiebe et al. (2005) como parte do campo de sentiment analysis. O objetivo é distinguir textos factuais de textos que expressam opiniões, julgamentos ou emoções. Abordagens clássicas utilizam lexicons e modelos baseados em features, enquanto métodos modernos utilizam Transformers como BERT, RoBERTa e DeBERTa, geralmente alcançando F1-score superior a 92% em corpora balanceados.
+A detecção automática de subjetividade foi originalmente proposta por Wiebe et al. (2005) como parte do campo de sentiment analysis. O objetivo é distinguir textos factuais de textos que expressam opiniões, julgamentos ou emoções. Abordagens clássicas utilizam lexicons e modelos baseados em features, enquanto métodos modernos utilizam Transformers como BERT, RoBERTa e DeBERTa, geralmente alcançando F1-score superior a 92\% em corpora balanceados.
 
 A Task 1 do CheckThat! 2025 explora subjetividade em notícias e afirmações verificáveis, com o objetivo aplicado de auxiliar sistemas de checagem de fatos (fact-checking). Modelos Transformer têm sido dominantes em competições anteriores, como CheckThat! 2022–2024.
 
@@ -72,6 +72,115 @@ A Task 3 do SemEval 2024 – Emotion Cause in Conversations (ECAC) estrutura ECE
 Embora estudos sobre subjetividade e emoção estejam relacionados conceitualmente, quase não há trabalhos combinando explicitamente ambas as tarefas. A conexão lingüística é clara: emoções são manifestações típicas de subjetividade; logo, identificar subjetividade pode atuar como um mecanismo de filtro para detectar regiões onde causas emocionais se manifestam.
 
 Nosso trabalho é, até onde sabemos, o primeiro a integrar subjetividade → ECE usando datasets de competições internacionais diferentes.
+
+\section{Método}
+
+Nesta seção detalhamos o desenvolvimento das duas tarefas propostas: (i) detecção de subjetividade em notícias, baseada no corpus da CheckThat! Lab (CLEF 2025), e (ii) identificação de causa de emoção em diálogos, conforme o desafio SemEval-2024 Emotional Causality in Conversations (ECAC). Cada pipeline foi construído, treinado e avaliado separadamente, respeitando a natureza das tarefas e utilizando modelos baseados em Transformers.
+
+\subsection{Task 1 – Detecção de Subjetividade em Notícias (CheckThat! 2025)}
+
+A primeira parte do experimento consiste em detectar se um trecho noticioso é subjetivo ou objetivo, uma tarefa de classificação binária. Os dados foram obtidos diretamente do repositório oficial do CheckThat! Lab, contendo subdivisões para train, validation, dev\_test, test\_labeled e test\_unlabeled. Cada instância é composta por um campo textual (sentence) e por um rótulo categórico (OBJ ou SUBJ).
+
+\subsubsection{Preparação dos dados}
+
+Inicialmente, o conjunto de dados é carregado via HuggingFace Datasets. Em seguida:
+
+convertem-se os rótulos para valores numéricos (OBJ → 0, SUBJ → 1);
+
+reduz-se o conjunto de colunas para apenas aquelas essenciais (sentence, labels, label);
+
+remove-se, no caso de test\_unlabeled, qualquer coluna além de sentence.
+
+A tokenização é realizada com o modelo RoBERTa-base, adotando truncamento e preenchimento até 256 tokens. Cada divisão dos dados passa a ser armazenada no formato PyTorch, possibilitando entrada direta no Trainer.
+
+\subsubsection{Modelo}
+
+Para a classificação, utilizamos AutoModelForSequenceClassification, inicializado a partir de roberta-base, com duas classes de saída. Essa arquitetura é adequada para capturar nuances semânticas em sentenças curtas, o que é fundamental na distinção entre subjetividade e objetividade.
+
+\subsubsection{Estratégia de Treinamento}
+
+O treinamento emprega:
+
+30 épocas
+
+learning rate = 2e-5
+
+batch-size de 16 para treino e 32 para validação
+
+weight decay de 0.01
+
+A métrica principal utilizada foi F1-macro, complementada por accuracy.
+A função compute\_metrics calcula ambos, utilizando o pacote evaluate.
+
+Ao final do treinamento, o modelo é avaliado nos três conjuntos rotulados disponíveis: validation, dev\_test e test\_labeled.
+
+\subsubsection{Resultados e Análise}
+
+A curva de perda durante o treino foi registrada a partir do histórico do Trainer, permitindo avaliar o comportamento do modelo ao longo dos passos de otimização. A perda tende a diminuir de forma consistente, sugerindo convergência estável.
+
+Para inferência, implementou-se a função classify\_subjectivity(), capaz de processar textos isolados ou em lote, retornando:
+
+rótulo previsto: OBJ ou SUBJ
+
+probabilidade estimada para a classe subjetiva
+
+Por fim, o modelo treinado e o tokenizer foram salvos no Google Drive, garantindo reprodutibilidade e reutilização futura no ambiente de produção.
+
+\section{Task 2 – Identificação de Causa de Emoção em Diálogos (SemEval-2024 ECAC)}
+
+A segunda parte do projeto trata da tarefa de Extração de Causa de Emoção, cujo objetivo é identificar o trecho de texto que desencadeia uma emoção expressa em determinado turno de diálogo.
+
+\subsection{Conversão para Formato de QA}
+
+O dataset do SemEval-ECAC disponibiliza diálogos compostos por múltiplas falas e acompanhados de pares emoção – causa. Contudo, o modelo-base utilizado (RoBERTa-base para QA) exige o formato típico de Pergunta e Resposta (Question Answering).
+
+Assim, cada diálogo é transformado em um exemplo QA com:
+
+contexto: o diálogo completo, reconstruído linha a linha;
+
+pergunta: “What is the cause of the emotion X?”;
+
+resposta: o trecho textual correspondente ao cause span, acompanhado de seu índice de início no contexto.
+
+Esse processo é realizado pela função conversation\_to\_qa\_examples(). Casos em que o span exato não é encontrado no contexto são descartados, seguindo estratégia adotada em competições anteriores.
+
+\subsection{Tokenização e Alinhamento de Spans}
+
+Como o QA exige alinhamento entre caracteres e tokens, foi implementada a função prepare\_train\_features(), que:
+
+Tokeniza pares (pergunta, contexto);
+
+Gera overflows com doc stride para lidar com contextos longos;
+
+Mapeia cada resposta verdadeira para índices start\_positions e end\_positions;
+
+Remove informações auxiliares desnecessárias para o treinamento.
+
+Esse processo é central para garantir que o modelo consiga aprender localizações tokenizadas da causa emocional.
+
+\subsection{Modelo e Treinamento}
+
+O modelo empregado é o AutoModelForQuestionAnswering baseado em RoBERTa-base. O treinamento utiliza:
+
+3 épocas
+
+batch-size 8/16
+
+learning rate = 3e-5
+
+A métrica padrão do Trainer foi utilizada, embora avaliações mais avançadas (como EM/F1 no estilo SQuAD) possam ser integradas futuramente.
+
+\subsubsection{Predição de Causas}
+
+A função predict\_cause() recebe um contexto e o nome de uma emoção, constrói a pergunta correspondente e retorna o trecho estimado pelo modelo como causa. O processo envolve:
+
+gerar logits de início e fim da resposta;
+
+selecionar índices de maior probabilidade;
+
+reconstruir a resposta a partir dos tokens decodificados.
+
+Essa função é útil para testar casos individuais e para integrar a etapa de QA em aplicações reais.
 
 \section{Limitações}
 
@@ -88,3 +197,5 @@ A aplicação de métodos automatizados para análise de subjetividade e emoçã
 Outro ponto crítico envolve o risco de uso indevido. Ferramentas capazes de identificar emoções e suas causas podem, em mãos inadequadas, ser aplicadas para manipulação discursiva, segmentação psicográfica ou vigilância de jornalistas e cidadãos. Assim, ressaltamos a necessidade de transparência metodológica, auditorias contínuas e diretrizes claras para limitar o uso dessas tecnologias a cenários eticamente apropriados.
 
 Por fim, enfatizamos que o modelo não deve ser utilizado como substituto de análise humana qualificada. A interpretação de subjetividade e causalidade emocional em notícias é uma tarefa contextual e complexa; sistemas automáticos devem servir como apoio analítico, e não como autoridade decisória. Incentivamos que futuros trabalhos incluam auditorias de viés, testes em múltiplas culturas e mecanismos de interpretabilidade para fortalecer a responsabilidade no desenvolvimento e uso desses sistemas.
+
+\end{document}
