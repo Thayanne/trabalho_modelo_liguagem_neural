@@ -155,11 +155,26 @@ alcançou um desempenho robusto, com \textbf{acurácia de 79.0\%} e
 \textbf{F1-Macro de 0.744} no conjunto de teste rotulado, validando sua eficácia 
 para a primeira etapa do pipeline.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{1.png}
+    \caption{Evolução do training loss do Modelo 1 ao longo dos steps.}
+    \label{fig:loss-model1}
+\end{figure}
+
 \subsection{Tarefa 2: Extração de Causa de Emoção (ECE)}
 
 O modelo de Question Answering (QA) para ECE, também baseado em \texttt{roberta-base}, 
 foi treinado e avaliado, resultando em uma perda de avaliação (\textit{eval\_loss}) de 
 aproximadamente \textbf{2.08}, demonstrando capacidade de realizar a tarefa.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{2.png}
+    \caption{Training loss do Modelo 2 (QA) ao longo dos steps.}
+    \label{fig:loss-model2}
+\end{figure}
+
 
 \subsection{Teste de Hipóteses}
 
@@ -209,7 +224,22 @@ estatisticamente significativa:
 Como o p-valor é muito superior a $0.05$, concluímos que não há diferença estatística 
 no desempenho. Portanto, a \textbf{Hipótese 2 foi refutada}.
 
-{Limitações}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{4.png}
+    \caption{Distribuição de F1 por grupo de subjetividade.}
+    \label{fig:loss-model1}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\linewidth]{3.png}
+    \caption{Distribuição das emoções em contextos subjetivos e objetivos.}
+    \label{fig:emotion-dist}
+\end{figure}
+
+
+\section{Limitações}
 
 Apesar dos resultados promissores, este trabalho apresenta limitações que devem ser reconhecidas para uma interpretação adequada dos achados e para orientar pesquisas futuras. Primeiramente, a cobertura linguística e cultural das bases utilizadas pode introduzir vieses. Tanto corpora de detecção de subjetividade quanto bases de análise de causa de emoções frequentemente refletem padrões discursivos específicos de determinado país, período histórico ou linha editorial. Assim, os modelos podem capturar vieses implícitos presentes nas bases — por exemplo, associação desbalanceada entre determinados tópicos e polaridade emocional — comprometendo sua generalização para outros contextos jornalísticos.
 
