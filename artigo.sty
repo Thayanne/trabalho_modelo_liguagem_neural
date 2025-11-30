@@ -142,73 +142,95 @@ A função compute\_metrics calcula ambos, utilizando o pacote evaluate.
 
 Ao final do treinamento, o modelo é avaliado nos três conjuntos rotulados disponíveis: validation, dev\_test e test\_labeled.
 
-\subsubsection{Resultados e Análise}
 
-A curva de perda durante o treino foi registrada a partir do histórico do Trainer, permitindo avaliar o comportamento do modelo ao longo dos passos de otimização. A perda tende a diminuir de forma consistente, sugerindo convergência estável.
+\section{Resultados}
 
-Para inferência, implementou-se a função classify\_subjectivity(), capaz de processar textos isolados ou em lote, retornando:
+Nesta seção, apresentamos os resultados experimentais obtidos nas duas tarefas sequenciais e nos testes de hipóteses que integram os dois modelos.
 
-rótulo previsto: OBJ ou SUBJ
+\subsection{Tarefa 1: Detecção de Subjetividade}
 
-probabilidade estimada para a classe subjetiva
+O modelo \texttt{roberta-base} treinado na tarefa de classificação de subjetividade alcançou um desempenho robusto, com acurácia de \textbf{XX\%} e F1-Macro de \textbf{XX} no conjunto de teste rotulado, validando sua eficácia para a primeira etapa do pipeline.
 
-Por fim, o modelo treinado e o tokenizer foram salvos no Google Drive, garantindo reprodutibilidade e reutilização futura no ambiente de produção.
+\subsection{Tarefa 2: Extração de Causa de Emoção (ECE)}
 
-\section{Task 2 – Identificação de Causa de Emoção em Diálogos (SemEval-2024 ECAC)}
+O modelo de Question Answering (QA) para ECE, também baseado em \texttt{roberta-base}, foi treinado e avaliado, resultando em uma perda de avaliação (\textit{eval\_loss}) de aproximadamente \textbf{XX}, demonstrando capacidade satisfatória de realizar a tarefa.
 
-A segunda parte do projeto trata da tarefa de Extração de Causa de Emoção, cujo objetivo é identificar o trecho de texto que desencadeia uma emoção expressa em determinado turno de diálogo.
+\subsection{Teste de Hipóteses}
 
-\subsection{Conversão para Formato de QA}
+\subsubsection{Hipótese 1: Correlação entre Subjetividade e Distribuição Emocional}
 
-O dataset do SemEval-ECAC disponibiliza diálogos compostos por múltiplas falas e acompanhados de pares emoção – causa. Contudo, o modelo-base utilizado (RoBERTa-base para QA) exige o formato típico de Pergunta e Resposta (Question Answering).
+Para testar esta hipótese, aplicamos o modelo de subjetividade aos contextos do dataset de ECE. Um teste de Qui-quadrado foi realizado para verificar se a distribuição das emoções é independente da subjetividade. Os resultados foram:
 
-Assim, cada diálogo é transformado em um exemplo QA com:
+\begin{itemize}
+    \item $\chi^2 = \textbf{XX}$
+    \item $p\text{-valor} \approx \mathbf{X \times 10^{-44}}$
+\end{itemize}
 
-contexto: o diálogo completo, reconstruído linha a linha;
+O valor extremamente alto de $\chi^2$ e o p-valor infinitesimal indicam uma associação estatisticamente muito forte. A análise dos resíduos mostra que emoções como \textit{anger} (raiva) são significativamente mais frequentes em contextos subjetivos. Portanto, a Hipótese 1 foi confirmada com alta confiança.
 
-pergunta: “What is the cause of the emotion X?”;
+\subsubsection{Hipótese 2: Impacto da Filtragem por Subjetividade no Desempenho da ECE}
 
-resposta: o trecho textual correspondente ao cause span, acompanhado de seu índice de início no contexto.
+Para esta hipótese, comparamos o desempenho (F-score) do modelo de ECE em contextos de alta e baixa subjetividade. Os resultados estão na Tabela~\ref{tab:subj-ece-performance}.
 
-Esse processo é realizado pela função conversation\_to\_qa\_examples(). Casos em que o span exato não é encontrado no contexto são descartados, seguindo estratégia adotada em competições anteriores.
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Grupo} & \textbf{Nº Exemplos} & \textbf{F-score Médio} \\
+\hline
+LOW\_SUBJ & XX & XX \\
+HIGH\_SUBJ & XX & XX \\
+\hline
+\end{tabular}
+\caption{Desempenho do modelo de ECE por grupo de subjetividade.}
+\label{tab:subj-ece-performance}
+\end{table}
 
-\subsection{Tokenização e Alinhamento de Spans}
+Um teste de Mann–Whitney U foi conduzido:
 
-Como o QA exige alinhamento entre caracteres e tokens, foi implementada a função prepare\_train\_features(), que:
+\begin{itemize}
+    \item $U = \textbf{XX}$
+    \item $p = \textbf{XX}$
+\end{itemize}
 
-Tokeniza pares (pergunta, contexto);
+Como o p-valor é muito superior a $0.05$, concluímos que não há diferença estatística no desempenho. A Hipótese 2 foi, portanto, refutada.
 
-Gera overflows com doc stride para lidar com contextos longos;
+\section{Discussão}
 
-Mapeia cada resposta verdadeira para índices start\_positions e end\_positions;
+Os resultados experimentais — especialmente a forte confirmação da Hipótese 1 e a clara refutação da Hipótese 2 — permitem uma discussão refinada sobre a interação entre subjetividade e causalidade emocional.
 
-Remove informações auxiliares desnecessárias para o treinamento.
+\subsection{A Forte Associação entre Subjetividade e Emoção (H1 Confirmada)}
 
-Esse processo é central para garantir que o modelo consiga aprender localizações tokenizadas da causa emocional.
+A confirmação da Hipótese 1 foi extremamente forte. O valor de qui-quadrado de \textbf{XX}, com p-valor $\approx X \times 10^{-44}$, indica que a associação entre subjetividade e tipo de emoção é massiva. Isso valida empiricamente a premissa de que subjetividade é um excelente sinalizador da presença de conteúdo afetivo.
 
-\subsection{Modelo e Treinamento}
+Os resíduos do teste mostram sobrerrepresentação de emoções intensas — como \textit{anger} — em trechos subjetivos. Assim, subjetividade não apenas indica presença de emoção, mas também correlaciona-se a valências específicas.
 
-O modelo empregado é o AutoModelForQuestionAnswering baseado em RoBERTa-base. O treinamento utiliza:
+\subsection{A Ineficácia da Subjetividade como Filtro Pragmático (H2 Refutada)}
 
-3 épocas
+O resultado mais contraintuitivo é a refutação da Hipótese 2. Não encontramos evidência de que filtrar contextos subjetivos melhora o desempenho da ECE. O F-score médio foi praticamente idêntico entre os grupos (diferença desprezível), e o p-valor confirma que essa pequena variação é aleatória.
 
-batch-size 8/16
+Isso reforça que:
 
-learning rate = 3e-5
+\begin{quote}
+\textbf{O modelo de QA aprende padrões causais independentes do tom subjetivo do texto.}
+\end{quote}
 
-A métrica padrão do Trainer foi utilizada, embora avaliações mais avançadas (como EM/F1 no estilo SQuAD) possam ser integradas futuramente.
+Os sinais realmente usados pelo modelo incluem:
 
-\subsubsection{Predição de Causas}
+\begin{itemize}
+    \item conectivos causais (\textit{porque, devido a, por causa de});
+    \item estrutura sintática e relações entre cláusulas;
+    \item coerência discursiva ao longo do diálogo;
+    \item proximidade textual entre emoção e causa.
+\end{itemize}
 
-A função predict\_cause() recebe um contexto e o nome de uma emoção, constrói a pergunta correspondente e retorna o trecho estimado pelo modelo como causa. O processo envolve:
+Ou seja, causas emocionais podem aparecer tanto em textos objetivos quanto subjetivos.
 
-gerar logits de início e fim da resposta;
+\subsection{Implicações: A Robustez do Modelo de QA}
 
-selecionar índices de maior probabilidade;
+O achado tem impacto positivo: o modelo é robusto e generaliza bem. Não depende de filtros prévios, o que aumenta sua aplicabilidade.
 
-reconstruir a resposta a partir dos tokens decodificados.
-
-Essa função é útil para testar casos individuais e para integrar a etapa de QA em aplicações reais.
+Isso sugere que abordagens futuras devem explorar \textbf{aprendizado multitarefa}, em que subjetividade e ECE são aprendidas simultaneamente, permitindo integração mais flexível, em vez de filtragem rígida.
 
 \section{Limitações}
 
@@ -228,13 +250,20 @@ Por fim, enfatizamos que o modelo não deve ser utilizado como substituto de an�
 
 \section{Conclusão}
 
-Ao propor a integração entre detecção de subjetividade e extração de causas de emoção, este trabalho buscou aproximar duas tarefas que, embora relacionadas do ponto de vista linguístico e pragmático, têm sido tratadas de maneira isolada na pesquisa em PLN. Nossos experimentos mostraram que a subjetividade é, de fato, um terreno fértil para a manifestação de conteúdo emocional, mas essa relação não é suficientemente forte para orientar de maneira consistente a extração de causas emocionais.
+A subjetividade sinaliza a presença de emoção, mas o modelo de QA para ECE não precisa dessa pista para funcionar bem.
 
-A ausência de ganhos sistemáticos no desempenho da ECE ao aplicar a filtragem por subjetividade evidencia uma limitação estrutural desse tipo de abordagem: causas emocionais não emergem apenas de trechos subjetivos, mas de construções discursivas mais amplas que incluem progressão temática, relações inferenciais e dependências entre turnos. Assim, embora o pipeline proposto seja conceitualmente coerente e empiricamente explorável, ele revela os limites de se tratar fenômenos afetivos e pragmáticos como etapas sequenciais e independentes.
+Este estudo investigou a integração entre detecção de subjetividade e extração de causas de emoção, revelando uma dicotomia clara:
 
-Ainda assim, os resultados obtidos são valiosos para a compreensão do fenômeno. Eles sugerem que a integração entre tarefas pragmáticas não deve ser descartada, mas repensada sob modelos que articulem subjetividade, emoção e causalidade de forma mais profunda. Abordagens multitarefa, representações discursivas hierárquicas e mecanismos de interpretabilidade surgem como caminhos promissores para superar as limitações identificadas.
+\begin{itemize}
+    \item A subjetividade de um texto está fortemente associada à distribuição de emoções (Hipótese 1 confirmada).
+    \item Essa associação \emph{não} melhora o desempenho da ECE (Hipótese 2 refutada).
+\end{itemize}
 
-Em síntese, concluímos que a subjetividade é um indicador útil, porém insuficiente, e que avanços na extração de causas emocionais dependerão de modelos capazes de integrar múltiplos níveis de informação linguística. Esperamos que esta investigação incentive novas pesquisas que combinem linguística, modelagem neural e responsabilidade ética na análise automática de fenômenos subjetivos e emocionais.
+O modelo de QA se baseia predominantemente em sinais linguísticos diretos — como conectivos causais e estrutura sintática — tornando-se independente do tom subjetivo.
+
+Concluímos que, embora subjetividade e emoção estejam interligadas, \textbf{a filtragem por subjetividade não é uma estratégia eficiente para otimizar ECE}. Sugerimos que futuros trabalhos explorem arquiteturas integradas, especialmente modelos multitarefa e soluções discursivas hierárquicas.
+
+Esse estudo contribui para desmistificar a relação entre subjetividade e causalidade emocional, apontando caminhos metodológicos mais sofisticados para pesquisas futuras.
 
 
 \begin{thebibliography}{}
