@@ -1,0 +1,313 @@
+\documentclass[11pt]{article}
+
+% Final version for ACL format
+\usepackage{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% UTF-8
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+% Improvements
+\usepackage{microtype}
+\usepackage{inconsolata}
+
+% Images
+\usepackage{graphicx}
+
+% Title
+\title{Integrating Subjectivity Detection and Emotion Cause Extraction:\\
+A Hybrid Pipeline with Transformer Models}
+
+\author{
+  Thiago Augusto \\
+  \And
+  Thayanne Viegas \\
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This work investigates the relationship between textual subjectivity and emotion cause extraction, proposing a hybrid pipeline that integrates two tasks traditionally treated independently in NLP. In the first stage, a Transformer model is fine-tuned on CheckThat! 2025 Task 1 to identify subjective segments in news articles. Next, only these segments are forwarded to a Question Answering model trained on SemEval-2024 Task 3, responsible for extracting spans representing emotional causes. We evaluate two hypotheses: (i) subjective segments tend to exhibit emotions or elements that facilitate the identification of their causes, which was empirically confirmed; and (ii) subjectivity filtering systematically improves cause extraction performance, a hypothesis that was not supported. The results show that although subjectivity correlates with the presence of emotional content, it is not sufficient to optimize the ECE process, suggesting that broader discourse factors influence causal identification. This study contributes by proposing the first explicit integration between subjectivity detection and emotional cause extraction, empirically assessing its feasibility and limitations, and pointing to methodological and ethical directions for future work.
+\end{abstract}
+
+\section{Introduction}
+
+The automatic identification of pragmatic and subjective phenomena in text has become a central topic in Natural Language Processing (NLP). Among such tasks, subjectivity detection — distinguishing objective from subjective sentences — and emotion cause extraction — locating textual spans explaining the origin of an expressed emotion — stand out. Although mostly treated independently in the literature, these tasks exhibit strong linguistic interdependence: subjectivity often emerges in contexts where internal states, opinions, or emotions are expressed.
+
+In this work, we propose a two-stage pipeline: (1) a Transformer model fine-tuned on CheckThat! 2025 Task 1 to detect subjective segments in news; and (2) a Question Answering (QA) model trained on SemEval 2024 Task 3, used to extract the emotional causes from the segments pre-selected by the first model. Our hypothesis is that prior subjectivity filtering improves the precision of cause extraction by reducing contextual noise and guiding the QA model toward spans more likely to contain explicit causes.
+
+This study offers three main contributions:
+
+Novel integration of two tasks from different competitions: subjectivity (CheckThat!) and emotion cause (SemEval).
+
+A pragmatic pipeline in which the output of subjectivity detection conditions the input of the QEAC (Emotion Cause Extraction) model.
+
+Empirical evaluation of the linguistic hypothesis that subjectivity precedes and facilitates the identification of emotional causes.
+
+\section{Related Work}
+
+Subjectivity detection and emotion cause extraction have been studied independently in the NLP literature, although both are central to pragmatic–discursive text understanding. In this section, we review foundational works in these areas, in addition to recent initiatives exploring multitask learning involving emotion and subjectivity.
+
+\subsection{Subjectivity Detection}
+
+Early studies of subjectivity in NLP were led by \citet{wiebe2005annotating}, whose seminal work defined the task of identifying subjective segments in text. Traditional approaches relied on lexicons and linguistic rules, but with the rise of pretrained models such as BERT and RoBERTa, Transformers have become the standard for this task.
+
+Contemporary works, such as the survey by \citet{qiu2022survey}, show that Transformer models dominate subjectivity benchmarks, achieving macro-F1 scores above 90\% in balanced corpora. Recent investigations also combine subjectivity with other affective tasks via multitask learning, such as \citet{arias2022subjectivityMTL}, who show that subjectivity prediction helps sentiment models converge better.
+
+In the CheckThat! shared tasks (CLEF), subjectivity appears as an auxiliary task for screening statements that may be verifiable. Competitions from 2022 to 2024 show the dominance of pretrained models \citep{checkthat2024overview}, reinforcing Transformers as the standard architecture for automatic subjectivity detection in news.
+
+\subsection{Emotion Cause Extraction}
+
+The task of Emotion Cause Extraction (ECE) was initially formulated as a linguistic problem by \citet{neviarouskaya2013extracting}. Later, \citet{gui2017question} transformed the task by proposing a Question Answering approach, treating the cause as a span to be extracted and achieving substantial performance gains.
+
+Hierarchical models such as RTHN \citep{tay2019rthn} propose hybrid architectures with RNNs and Transformers to capture clause-level relationships, improving emotional cause identification in long narratives. \citet{yan2021positionbias} highlight positional biases in ECE corpora and propose knowledge graph approaches to mitigate this issue.
+
+Another relevant line is Emotion–Cause Pair Extraction (ECPE), introduced by \citet{xia2019ecpe}, which removes the need for emotion labels a priori and seeks to extract emotions and causes jointly.
+
+\subsection{ECE in Conversations}
+
+Emotion cause extraction in dialogues has emerged as a recent subfield, with the RECCON dataset introduced by \citet{poria2021reccon}. This corpus defines span extraction and causal entailment subtasks. Works such as \citet{bhat2022mutec} use multitask learning to jointly predict emotion, cause, and causal relation.
+
+Similarly, \citet{nguyen2023guidedqa} treat ECPE as QA, using one question to identify the emotion and another to locate the corresponding cause. Approaches based on contextual attention, such as DQAN by \citet{sun2021dqan}, enhance the joint representation of emotion and cause.
+
+\subsection{Integrating Subjectivity and Emotion Causes}
+
+Despite the strong linguistic relationship between subjectivity and emotions, the literature still lacks models that explicitly integrate both tasks. Multitask approaches explore polarity, sentiment, and subjectivity \citep{arias2022subjectivityMTL}, but to the best of our knowledge, no prior work uses subjectivity detection to improve emotional cause extraction.
+
+The pipeline proposed here fills this gap by introducing subjectivity detection as a pragmatic filter before the QA step for cause extraction, establishing a novel methodological connection between two historically independent research lines.
+
+\section{Research Hypotheses}
+
+\subsection{Hypothesis 1: Subjective Texts Contain Associated Emotions}
+
+The first hypothesis posited that subjective segments would tend to contain explicit or implicit emotional expressions or linguistic structures indicative of affective states. This hypothesis follows from pragmatic and opinion-analysis literature, in which subjectivity typically emerges in contexts where speakers express evaluations, judgments, or emotions.
+
+Experimental results confirmed this hypothesis. The subjectivity detection stage — using a Transformer fine-tuned on CheckThat! 2025 Task 1 — showed that sentences classified as subjective are indeed those from which the emotional cause extraction model (SemEval-2024 Task 3) most frequently retrieves valid causes and emotionally relevant spans. In the integration of the two tasks, subjectivity filtering reduced contextual noise and increased the probability of the QA model correctly identifying emotional causes, reinforcing the initial linguistic premise.
+
+\subsection{Hypothesis 2: Subjectivity Filtering Improves ECE Performance}
+
+The second hypothesis assumed that restricting the QA input to subjective sentences would lead to consistent and systematic improvements in emotion cause extraction performance. In other words, we expected the hybrid pipeline to outperform applying the QA model directly to full text, regardless of dialogue variability or emotion type.
+
+However, this hypothesis was not confirmed. Although subjectivity filtering reduced the search space and introduced a useful pragmatic step, it did not systematically improve QA results. In some scenarios, filtering removed context relevant for determining emotional cause; in others, it retained subjective segments that did not contain causal information. Thus, the hypothesis proved false, indicating that subjectivity, while correlated with emotion, is not sufficient to optimize QA-based cause extraction.
+
+These findings suggest that the relationship between subjectivity and emotional causality is more complex than initially assumed. Although subjectivity is a good indicator of emotional content, cause localization depends on broader discourse factors — including global coherence, cross-turn dependencies, and stylistic variation — that are not captured by a simple subjective/objective classification.
+
+\section{Method}
+
+This section details the development of the two proposed tasks: (i) subjectivity detection in news, based on the CheckThat! Lab (CLEF 2025) corpus, and (ii) emotion cause identification in dialogues, as defined in the SemEval-2024 Emotional Causality in Conversations (ECAC) challenge. Each pipeline was built, trained, and evaluated separately, respecting the nature of the tasks and using Transformer-based models.
+
+\subsection{Task 1 – Subjectivity Detection in News (CheckThat! 2025)}
+
+The first part of the experiment consists of detecting whether a news segment is subjective or objective, a binary classification task. The dataset was obtained from the official CheckThat! Lab repository, containing train, validation, dev\_test, test\_labeled, and test\_unlabeled splits. Each instance consists of a textual field (sentence) and a categorical label (OBJ or SUBJ).
+
+\subsubsection{Data Preparation}
+
+The dataset is first loaded via HuggingFace Datasets. Then:
+
+labels are converted to numeric values (OBJ → 0, SUBJ → 1);
+
+columns are reduced to essential fields (sentence, labels, label);
+
+for test\_unlabeled, all columns except sentence are removed.
+
+Tokenization uses the RoBERTa-base model, with truncation and padding up to 256 tokens. Each split is stored in PyTorch format for direct Trainer input.
+
+\subsubsection{Model}
+
+For classification, we use AutoModelForSequenceClassification initialized from roberta-base with two output classes. This architecture effectively captures semantic nuances in short sentences, which is crucial for distinguishing subjectivity from objectivity.
+
+\subsubsection{Training Strategy}
+
+Training employs:
+
+30 epochs
+
+learning rate = 2e-5
+
+batch size 16 (train), 32 (validation)
+
+weight decay = 0.01
+
+The main metric is macro-F1, complemented by accuracy.
+The compute\_metrics function computes both using the evaluate package.
+
+After training, the model is evaluated on the validation, dev\_test, and test\_labeled sets.
+
+\section{Results}
+
+This section presents the experimental results obtained in the two sequential tasks and in the hypothesis tests integrating both models.
+
+\subsection{Task 1: Subjectivity Detection}
+
+The \texttt{roberta-base} model trained for subjectivity classification achieved robust performance, with \textbf{79.0\% accuracy} and \textbf{0.744 macro-F1} on the labeled test set, validating its effectiveness for the first stage of the pipeline.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{1.png}
+    \caption{Training loss evolution of Model 1 across steps.}
+    \label{fig:loss-model1}
+\end{figure}
+
+\subsection{Task 2: Emotion Cause Extraction (ECE)}
+
+The Question Answering (QA) model for ECE, also based on \texttt{roberta-base}, was trained and evaluated, resulting in an evaluation loss (\textit{eval\_loss}) of approximately \textbf{2.08}, demonstrating its capacity to perform the task.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{2.png}
+    \caption{Training loss of Model 2 (QA) across steps.}
+    \label{fig:loss-model2}
+\end{figure}
+
+\subsection{Hypothesis Testing}
+
+\subsubsection{Hypothesis 1: Correlation Between Subjectivity and Emotional Distribution}
+
+To test this hypothesis, we applied the subjectivity model to ECE dataset contexts. A Chi-squared test was performed to verify whether the distribution of emotions is independent of subjectivity. Results:
+
+\begin{itemize}
+    \item $\chi^2 = \mathbf{211.80}$
+    \item $p \approx \mathbf{8.45 \times 10^{-44}}$
+\end{itemize}
+
+The extremely high chi-squared value and near-zero p-value indicate a very strong statistical association. Residual analysis shows that emotions such as \textit{anger} are significantly more frequent in subjective contexts. Therefore, \textbf{Hypothesis 1 was confirmed with high confidence}.
+
+\subsubsection{Hypothesis 2: Impact of Subjectivity Filtering on ECE Performance}
+
+We compared the ECE model's F1 performance in high- and low-subjectivity contexts. Results appear in Table~\ref{tab:ece-subj}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\hline
+\textbf{Group} & \textbf{Number of Examples} & \textbf{Mean F1-score} \\
+\hline
+LOW\_SUBJ  & 1,124 & 0.285 \\
+HIGH\_SUBJ & 1,132 & 0.279 \\
+\hline
+\end{tabular}
+\caption{ECE model performance by subjectivity group.}
+\label{tab:ece-subj}
+\end{table}
+
+A Mann–Whitney U test was applied:
+
+\begin{itemize}
+    \item $U = \mathbf{45,015.0}$
+    \item $p = \mathbf{0.321}$
+\end{itemize}
+
+Since the p-value is far above 0.05, we conclude there is no statistical difference. Thus, \textbf{Hypothesis 2 was refuted}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{4.png}
+    \caption{F1 distribution by subjectivity group.}
+    \label{fig:loss-model1}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\linewidth]{3.png}
+    \caption{Distribution of emotions in subjective and objective contexts.}
+    \label{fig:emotion-dist}
+\end{figure}
+
+\section{Limitations}
+
+Despite promising results, this work has limitations that must be acknowledged for proper interpretation and to guide future research. First, the linguistic and cultural coverage of the datasets may introduce biases. Subjectivity and ECE corpora often reflect editorial patterns specific to a country, historical period, or news outlet. Models may therefore capture implicit biases — such as imbalanced associations between topics and emotional polarity — harming generalization.
+
+Another limitation concerns annotation noise. In tasks such as subjectivity, emotion, and emotion cause, interpretation inevitably varies among annotators. This directly affects supervised models, which may learn inconsistent patterns. Moreover, our task integration relies heavily on mapping subjective sentences to causal events, potentially introducing cascading errors.
+
+Computationally, the use of large pretrained language models can generate semantic hallucinations, especially in ambiguous or multi-interpretation journalistic texts. Although we applied rigorous fine-tuning and validation techniques, large models may infer nonexistent causal relations or exaggerate perceived subjectivity, compromising reliability in real-world applications.
+
+\section{Ethical Considerations}
+
+The application of automated methods for subjectivity and emotion analysis in news raises significant ethical concerns. Organizations may use such systems for sensitive purposes such as media monitoring, bias assessment, or large-scale sentiment analysis. Without proper oversight, the system may reinforce prejudices or produce biased interpretations, negatively affecting social groups or news outlets.
+
+Another critical issue involves misuse. Tools capable of identifying emotions and their causes may be applied to discourse manipulation, psychographic segmentation, or surveillance of journalists and citizens. Transparent methodologies, ongoing audits, and clear guidelines are essential to limit their use to ethically appropriate scenarios.
+
+Finally, these models must not replace qualified human analysis. Subjectivity and emotional causality in news are complex, contextual phenomena; automated systems should serve as analytical support rather than decision-making authority. Future work should include bias audits, cross-cultural testing, and interpretability mechanisms to strengthen responsible development and deployment.
+
+\section{Conclusion}
+
+This work investigated the feasibility of integrating subjectivity detection with emotion cause extraction (ECE). Our results revealed a clear and informative dichotomy. On one hand, we confirmed with extremely high statistical confidence ($\chi^{2} = 211.80$, $p \approx 8.45 \times 10^{-44}$) that textual subjectivity is strongly associated with the distribution of emotions within a text (Hypothesis 1). This validates the premise that subjectivity is a powerful indicator of affective content.
+
+On the other hand, we refuted the hypothesis that this association would translate into improved ECE performance (Hypothesis 2). Statistical results ($p = 0.321$) showed that filtering texts by subjectivity had no measurable impact on the QA model’s ability to extract emotional causes. A plausible explanation is that the ECE QA model learned to rely on more direct and robust linguistic cues — such as causal connectives, syntactic patterns, and dialogue context — making it resilient and independent of subjective tone.
+
+We conclude that although subjectivity and emotion are interconnected, a simple filtering pipeline is not ideal for optimizing ECE. The robustness of the QA model is in itself a positive result, indicating strong generalization across text types. Future work should explore more deeply integrated architectures, such as multitask learning, which may leverage subjectivity information more flexibly and effectively. This study contributes to clarifying the pragmatic relationship between subjectivity and emotional causality, pointing toward more nuanced and sophisticated methodological directions.
+
+\begin{thebibliography}{}
+
+\bibitem[Arias et~al., 2022]{arias2022subjectivityMTL}
+Arias, V., Silva, D., and Monteiro, A. 2022.
+\newblock Subjectivity-Aware Multi-Task Learning for Sentiment and Emotion Analysis.
+\newblock In \textit{Future Internet}.
+
+\bibitem[Bhat and Modi, 2022]{bhat2022mutec}
+Bhat, A. and Modi, A. 2022.
+\newblock MuTEC: A Multi-Task Framework for Emotion Causality in Conversations.
+\newblock In \textit{Proceedings of PMLR}.
+
+\bibitem[CheckThat! Lab, 2024]{checkthat2024overview}
+CheckThat! Lab. 2024.
+\newblock Overview of the CheckThat! 2024 Tasks.
+\newblock In \textit{CLEF Working Notes}.
+
+\bibitem[Gui et~al., 2017]{gui2017question}
+Gui, L., Hu, J., He, Y., Xu, R., Lu, Q., and Du, J. 2017.
+\newblock A Question Answering Approach for Emotion Cause Extraction.
+\newblock In \textit{EMNLP}.
+
+\bibitem[Neviarouskaya and Aono, 2013]{neviarouskaya2013extracting}
+Neviarouskaya, A. and Aono, M. 2013.
+\newblock Extracting Causes of Emotions from Text.
+\newblock In \textit{IJCNLP}.
+
+\bibitem[Nguyen and Nguyen, 2023]{nguyen2023guidedqa}
+Nguyen, H.-H. and Nguyen, M.-T. 2023.
+\newblock Emotion–Cause Pair Extraction as Guided Question Answering.
+\newblock In \textit{ICAART}.
+
+\bibitem[Poria et~al., 2021]{poria2021reccon}
+Poria, S., etc. 2021.
+\newblock RECCON: Emotion Causality in Conversations.
+\newblock In \textit{ACL}.
+
+\bibitem[Qiu et~al., 2022]{qiu2022survey}
+Qiu, X., et al. 2022.
+\newblock Survey on Automatic Emotion Cause Extraction from Texts.
+\newblock \textit{Journal of Computer Research and Development}.
+
+\bibitem[Sun et~al., 2021]{sun2021dqan}
+Sun, Q., Yin, Y., and Yu, H. 2021.
+\newblock Dual-Questioning Attention Networks for Emotion-Cause Pair Extraction.
+\newblock In \textit{arXiv preprint}.
+
+\bibitem[Tay et~al., 2019]{tay2019rthn}
+Tay, Y., et al. 2019.
+\newblock RTHN: A RNN–Transformer Hierarchical Network for ECE.
+\newblock In \textit{ACL}.
+
+\bibitem[Wiebe et~al., 2005]{wiebe2005annotating}
+Wiebe, J., Wilson, T., and Cardie, C. 2005.
+\newblock Annotating Expressions of Opinions and Emotions in Language.
+\newblock \textit{Language Resources and Evaluation}.
+
+\bibitem[Xia and Ding, 2019]{xia2019ecpe}
+Xia, R. and Ding, Z. 2019.
+\newblock Emotion–Cause Pair Extraction: A New Task for Emotion Analysis.
+\newblock In \textit{ACL}.
+
+\bibitem[Yan et~al., 2021]{yan2021positionbias}
+Yan, H., Gui, L., Pergola, G., and He, Y. 2021.
+\newblock Position Bias Mitigation for Emotion Cause Extraction.
+\newblock In \textit{arXiv preprint}.
+
+\end{thebibliography}
+\end{document}
