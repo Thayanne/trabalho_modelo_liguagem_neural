@@ -145,94 +145,71 @@ Ao final do treinamento, o modelo é avaliado nos três conjuntos rotulados disp
 
 \section{Resultados}
 
-Nesta seção, apresentamos os resultados experimentais obtidos nas duas tarefas sequenciais e nos testes de hipóteses que integram os dois modelos.
+Nesta seção, apresentamos os resultados experimentais obtidos nas duas tarefas
+sequenciais e nos testes de hipóteses que integram os dois modelos.
 
 \subsection{Tarefa 1: Detecção de Subjetividade}
 
-O modelo \texttt{roberta-base} treinado na tarefa de classificação de subjetividade alcançou um desempenho robusto, com acurácia de \textbf{XX\%} e F1-Macro de \textbf{XX} no conjunto de teste rotulado, validando sua eficácia para a primeira etapa do pipeline.
+O modelo \texttt{roberta-base} treinado na tarefa de classificação de subjetividade 
+alcançou um desempenho robusto, com \textbf{acurácia de 79.0\%} e 
+\textbf{F1-Macro de 0.744} no conjunto de teste rotulado, validando sua eficácia 
+para a primeira etapa do pipeline.
 
 \subsection{Tarefa 2: Extração de Causa de Emoção (ECE)}
 
-O modelo de Question Answering (QA) para ECE, também baseado em \texttt{roberta-base}, foi treinado e avaliado, resultando em uma perda de avaliação (\textit{eval\_loss}) de aproximadamente \textbf{XX}, demonstrando capacidade satisfatória de realizar a tarefa.
+O modelo de Question Answering (QA) para ECE, também baseado em \texttt{roberta-base}, 
+foi treinado e avaliado, resultando em uma perda de avaliação (\textit{eval\_loss}) de 
+aproximadamente \textbf{2.08}, demonstrando capacidade de realizar a tarefa.
 
 \subsection{Teste de Hipóteses}
 
 \subsubsection{Hipótese 1: Correlação entre Subjetividade e Distribuição Emocional}
 
-Para testar esta hipótese, aplicamos o modelo de subjetividade aos contextos do dataset de ECE. Um teste de Qui-quadrado foi realizado para verificar se a distribuição das emoções é independente da subjetividade. Os resultados foram:
+Para testar esta hipótese, aplicamos o modelo de subjetividade aos contextos do dataset 
+de ECE. Um teste de Qui-quadrado foi realizado para verificar se a distribuição das emoções 
+é independente da subjetividade. Os resultados foram:
 
 \begin{itemize}
-    \item $\chi^2 = \textbf{XX}$
-    \item $p\text{-valor} \approx \mathbf{X \times 10^{-44}}$
+    \item $\chi^2 = \mathbf{211.80}$
+    \item $p \approx \mathbf{8.45 \times 10^{-44}}$
 \end{itemize}
 
-O valor extremamente alto de $\chi^2$ e o p-valor infinitesimal indicam uma associação estatisticamente muito forte. A análise dos resíduos mostra que emoções como \textit{anger} (raiva) são significativamente mais frequentes em contextos subjetivos. Portanto, a Hipótese 1 foi confirmada com alta confiança.
+O valor extremamente alto de qui-quadrado e o p-valor infinitesimal indicam uma 
+associação estatisticamente muito forte. A análise dos resíduos mostra que emoções como 
+\textit{anger} (raiva) são significativamente mais frequentes em contextos subjetivos. 
+Portanto, a \textbf{Hipótese 1 foi confirmada com alta confiança}.
 
 \subsubsection{Hipótese 2: Impacto da Filtragem por Subjetividade no Desempenho da ECE}
 
-Para esta hipótese, comparamos o desempenho (F-score) do modelo de ECE em contextos de alta e baixa subjetividade. Os resultados estão na Tabela~\ref{tab:subj-ece-performance}.
+Para esta hipótese, comparamos o desempenho (F1-score) do modelo de ECE em contextos 
+de alta e baixa subjetividade. Os resultados estão na Tabela~\ref{tab:ece-subj}.
 
 \begin{table}[h]
 \centering
 \begin{tabular}{lcc}
 \hline
-\textbf{Grupo} & \textbf{Nº Exemplos} & \textbf{F-score Médio} \\
+\textbf{Grupo} & \textbf{Número de Exemplos} & \textbf{F1-score Médio} \\
 \hline
-LOW\_SUBJ & XX & XX \\
-HIGH\_SUBJ & XX & XX \\
+LOW\_SUBJ  & 1{,}124 & 0.285 \\
+HIGH\_SUBJ & 1{,}132 & 0.279 \\
 \hline
 \end{tabular}
 \caption{Desempenho do modelo de ECE por grupo de subjetividade.}
-\label{tab:subj-ece-performance}
+\label{tab:ece-subj}
 \end{table}
 
-Um teste de Mann–Whitney U foi conduzido:
+Um teste de Mann–Whitney U foi realizado para verificar se a diferença observada era 
+estatisticamente significativa:
 
 \begin{itemize}
-    \item $U = \textbf{XX}$
-    \item $p = \textbf{XX}$
+    \item $U = \mathbf{45{,}015.0}$
+    \item $p = \mathbf{0.321}$
 \end{itemize}
 
-Como o p-valor é muito superior a $0.05$, concluímos que não há diferença estatística no desempenho. A Hipótese 2 foi, portanto, refutada.
+Como o p-valor é muito superior a $0.05$, concluímos que não há diferença estatística 
+no desempenho. Portanto, a \textbf{Hipótese 2 foi refutada}.
 
-\section{Discussão}
-
-Os resultados experimentais — especialmente a forte confirmação da Hipótese 1 e a clara refutação da Hipótese 2 — permitem uma discussão refinada sobre a interação entre subjetividade e causalidade emocional.
-
-\subsection{A Forte Associação entre Subjetividade e Emoção (H1 Confirmada)}
-
-A confirmação da Hipótese 1 foi extremamente forte. O valor de qui-quadrado de \textbf{XX}, com p-valor $\approx X \times 10^{-44}$, indica que a associação entre subjetividade e tipo de emoção é massiva. Isso valida empiricamente a premissa de que subjetividade é um excelente sinalizador da presença de conteúdo afetivo.
-
-Os resíduos do teste mostram sobrerrepresentação de emoções intensas — como \textit{anger} — em trechos subjetivos. Assim, subjetividade não apenas indica presença de emoção, mas também correlaciona-se a valências específicas.
-
-\subsection{A Ineficácia da Subjetividade como Filtro Pragmático (H2 Refutada)}
-
-O resultado mais contraintuitivo é a refutação da Hipótese 2. Não encontramos evidência de que filtrar contextos subjetivos melhora o desempenho da ECE. O F-score médio foi praticamente idêntico entre os grupos (diferença desprezível), e o p-valor confirma que essa pequena variação é aleatória.
-
-Isso reforça que:
-
-\begin{quote}
-\textbf{O modelo de QA aprende padrões causais independentes do tom subjetivo do texto.}
-\end{quote}
-
-Os sinais realmente usados pelo modelo incluem:
-
-\begin{itemize}
-    \item conectivos causais (\textit{porque, devido a, por causa de});
-    \item estrutura sintática e relações entre cláusulas;
-    \item coerência discursiva ao longo do diálogo;
-    \item proximidade textual entre emoção e causa.
-\end{itemize}
-
-Ou seja, causas emocionais podem aparecer tanto em textos objetivos quanto subjetivos.
-
-\subsection{Implicações: A Robustez do Modelo de QA}
-
-O achado tem impacto positivo: o modelo é robusto e generaliza bem. Não depende de filtros prévios, o que aumenta sua aplicabilidade.
-
-Isso sugere que abordagens futuras devem explorar \textbf{aprendizado multitarefa}, em que subjetividade e ECE são aprendidas simultaneamente, permitindo integração mais flexível, em vez de filtragem rígida.
-
-\section{Limitações}
+{Limitações}
 
 Apesar dos resultados promissores, este trabalho apresenta limitações que devem ser reconhecidas para uma interpretação adequada dos achados e para orientar pesquisas futuras. Primeiramente, a cobertura linguística e cultural das bases utilizadas pode introduzir vieses. Tanto corpora de detecção de subjetividade quanto bases de análise de causa de emoções frequentemente refletem padrões discursivos específicos de determinado país, período histórico ou linha editorial. Assim, os modelos podem capturar vieses implícitos presentes nas bases — por exemplo, associação desbalanceada entre determinados tópicos e polaridade emocional — comprometendo sua generalização para outros contextos jornalísticos.
 
@@ -250,20 +227,32 @@ Por fim, enfatizamos que o modelo não deve ser utilizado como substituto de an�
 
 \section{Conclusão}
 
-A subjetividade sinaliza a presença de emoção, mas o modelo de QA para ECE não precisa dessa pista para funcionar bem.
+Este trabalho investigou a viabilidade de um pipeline que integra a detecção de 
+subjetividade e a extração de causas de emoção (ECE). Nossos resultados revelaram uma 
+dicotomia clara e informativa. Por um lado, confirmamos com altíssima confiança estatística 
+($\chi^{2} = 211.80$, $p \approx 8.45 \times 10^{-44}$) que a subjetividade de um texto 
+está fortemente associada à distribuição das emoções nele contidas (Hipótese 1). Este 
+achado valida a premissa de que a subjetividade é um poderoso sinalizador da presença 
+de conteúdo afetivo.
 
-Este estudo investigou a integração entre detecção de subjetividade e extração de causas de emoção, revelando uma dicotomia clara:
+Por outro lado, refutamos a hipótese de que essa associação se traduziria em uma melhora 
+de desempenho para a tarefa de ECE (Hipótese 2). A análise estatística 
+($p = 0.321$) demonstrou que filtrar textos por subjetividade não teve impacto no desempenho 
+do nosso modelo de Question Answering para extrair causas emocionais. A interpretação 
+para este resultado contraintuitivo é que o modelo de QA para ECE aprendeu a se basear 
+em pistas linguísticas mais diretas e robustas, como conectivos causais, padrões 
+sintáticos e o contexto do diálogo, tornando-se resiliente e independente do tom 
+subjetivo do texto.
 
-\begin{itemize}
-    \item A subjetividade de um texto está fortemente associada à distribuição de emoções (Hipótese 1 confirmada).
-    \item Essa associação \emph{não} melhora o desempenho da ECE (Hipótese 2 refutada).
-\end{itemize}
+Concluímos, portanto, que embora subjetividade e emoção estejam interligadas, um simples 
+pipeline de filtragem não é a abordagem ideal para otimizar a ECE. A robustez do modelo 
+de QA é, em si, um resultado positivo, indicando que ele generaliza bem para diferentes 
+tipos de texto. Para trabalhos futuros, sugerimos a exploração de arquiteturas mais 
+integradas, como o aprendizado multitarefa, que podem aprender a alavancar a informação 
+de subjetividade de forma mais flexível e eficaz. Este estudo contribui para 
+desmistificar a relação pragmática entre subjetividade e causalidade emocional, apontando 
+para caminhos de pesquisa mais nuançados e metodologicamente sofisticados.
 
-O modelo de QA se baseia predominantemente em sinais linguísticos diretos — como conectivos causais e estrutura sintática — tornando-se independente do tom subjetivo.
-
-Concluímos que, embora subjetividade e emoção estejam interligadas, \textbf{a filtragem por subjetividade não é uma estratégia eficiente para otimizar ECE}. Sugerimos que futuros trabalhos explorem arquiteturas integradas, especialmente modelos multitarefa e soluções discursivas hierárquicas.
-
-Esse estudo contribui para desmistificar a relação entre subjetividade e causalidade emocional, apontando caminhos metodológicos mais sofisticados para pesquisas futuras.
 
 
 \begin{thebibliography}{}
